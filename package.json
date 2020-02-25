@@ -1,0 +1,34 @@
+{
+  "name": "dsk6539-project1",
+  "version": "1.0.0",
+  "description": "Spotify playlist viewer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Tests complete\"",
+    "pretest": "eslint ./src --fix",
+    "start": "node ./src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dkoester306/dsk6539-project1.git"
+  },
+  "author": "Daniel Koester",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dkoester306/dsk6539-project1/issues"
+  },
+  "homepage": "https://github.com/dkoester306/dsk6539-project1#readme",
+  "devDependencies": {
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb": "^18.0.1",
+    "eslint-plugin-import": "^2.20.1"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.4",
+    "cors": "^2.8.4",
+    "express": "~4.16.0",
+    "querystring": "~0.2.0",
+    "request": "~2.83.0",
+    "spotify-web-api-node": "^4.0.0"
+  }
+}

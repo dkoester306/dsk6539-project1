@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Example of the Authorization Code flow with Spotify</title>
+    <link
+      rel="stylesheet"
+      href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"
+    />
+    <style type="text/css">
+      #login,
+      #loggedin {
+        display: none;
+      }
+      .text-overflow {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 500px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="login">
+        <h1>This is an example of the Authorization Code flow</h1>
+        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+      </div>
+      <div id="loggedin">
+        <div id="homePage"></div>
+        <input type="text" id="searchSongInput" />
+        <button id="searchSongButton">Get Song</button>
+        <div id="songList">
+
+        </div>
+      </div>
+    </div>
+
+    <script id="home-template" type="text/x-handlebars-template">
+      <h1 id="userNameHeader">{{display_name}}</h1>
+      <h1>Search Song</h1>
+    </script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script>
+      const getSearch = (e, a) => {
+        console.log("in get search");
+        const searchInput = document.getElementById("searchSongInput").value;
+        $.ajax({
+          url: "/getSearch",
+          data: {
+            access: a,
+            searchTerm: searchInput
+          }
+        }).then(function(data) {
+          const tracks = data.tracks.items;
+          let addHTML = `<ul>`;
+          for(let i=0;i<tracks.length;i++)
+          {
+            addHTML = `${addHTML} <li>${tracks[i].name}</li>`;
+          }
+          addHTML = `${addHTML}</ul>`;
+          document.getElementById('songList').innerHTML = addHTML;
+        });
+      };
+
+      const getAuthorizationPage = a => {
+        var homeSource = document.getElementById("home-template").innerHTML,
+          homeTemplate = Handlebars.compile(homeSource),
+          homePlaceholder = document.getElementById("homePage");
+
+        // render oauth info
+        console.log(`Token is: ${a}`);
+        $.ajax({
+          url: "https://api.spotify.com/v1/me",
+          headers: {
+            Authorization: "Bearer " + a
+          }
+        }).then(function(response) {
+          a = response.accessToken;
+          homePlaceholder.innerHTML = homeTemplate(response);
+
+          $("#login").hide();
+          $("#loggedin").show();
+        });
+      };
+
+      const getHashParams = () => {
+        var hashParams = {};
+        var e,
+          r = /([^&;=]+)=?([^&;]*)/g,
+          q = window.location.hash.substring(1);
+        while ((e = r.exec(q))) {
+          hashParams[e[1]] = decodeURIComponent(e[2]);
+        }
+        return hashParams;
+      };
+
+      const init = () => {
+        var params = getHashParams();
+        var access_token = params.access_token,
+          refresh_token = params.refresh_token,
+          error = params.error;
+
+
+
+        // checks if the authenication code is there
+        if (error) {
+          alert("There was an error during the authentication");
+        } else {
+          if (access_token) {
+            getAuthorizationPage(access_token);
+            // get the playlists of the user
+          } else {
+            // render initial screen
+            $("#login").show();
+            $("#loggedin").hide();
+          }
+        }
+
+        const button = document.getElementById("searchSongButton");
+        const search = e => getSearch(e,access_token);
+
+        button.addEventListener("click", search);
+      };
+
+      window.onload = init;
+    </script>
+  </body>
+</html>
