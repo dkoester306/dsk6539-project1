@@ -80,7 +80,7 @@ const addSongToPlaylist = (request, response, body) => {
   }
   catch(err){
       console.log(err);
-      return;
+      return err;
   }
 
   for (let i = 0; i < customPlaylists.playlists.length; i++) {
