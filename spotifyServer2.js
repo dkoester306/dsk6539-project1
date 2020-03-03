@@ -50,9 +50,9 @@ app.get('/login', (req, res) => {
     querystring.stringify({
       response_type: 'code',
       client_id: clientId,
-      scope: scope,
+      scope,
       redirect_uri: redirectURI,
-      state: state,
+      state,
     })}`);
 });
 
@@ -74,7 +74,7 @@ app.get('/callback', (req, res) => {
     const authOptions = {
       url: 'https://accounts.spotify.com/api/token',
       form: {
-        code: code,
+        code,
         redirect_uri: redirectURI,
         grant_type: 'authorization_code',
       },
@@ -145,38 +145,6 @@ app.get('/refresh_token', (req, res) => {
   });
 });
 
-app.get('/getPlaylists', (req, res) => {
-  const { access_token } = req.query;
-  const options = {
-    url: 'https://api.spotify.com/v1/me/playlists',
-    headers: { Authorization: `Bearer ${access_token}` },
-    json: true,
-  };
-
-  request.get(options, (error, response, body) => {
-    const playlists = body;
-
-    res.send({ playlists });
-  });
-});
-
-app.get('/getSearch', (req, res) => {
-  const access_token = req.query.access;
-  const inputValue = req.query.searchTerm;
-  const parsedSearch = encodeURIComponent(inputValue);
-
-  const options = {
-    url: `https://api.spotify.com/v1/search?q=${parsedSearch}&type=track,artist`,
-    headers: { Authorization: `Bearer ${access_token}` },
-    json: true,
-  };
-
-  request.get(options, (error, response, body) => {
-    const search = body;
-
-    res.send(search);
-  });
-});
 
 console.log('Listening on 3000');
 app.listen(3000);

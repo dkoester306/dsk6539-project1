@@ -18,72 +18,38 @@
         width: 500px;
       }
     </style>
-  </head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
+    <script type="text/babel">
+      const stateKey = "spotify_auth_state";
+      var accessToken = null;
+      const login = () => {
+        var clientId = "6211d589dd89434aba2398d090ccb59d"; // Your client id
+        var redirectUri = "http://localhost:3000/"; // Your redirect uri
 
-  <body>
-    <div class="container">
-      <div id="login">
-        <h1>This is an example of the Authorization Code flow</h1>
-        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
-      </div>
-      <div id="loggedin">
-        <div id="homePage"></div>
-        <input type="text" id="searchSongInput" />
-        <button id="searchSongButton">Get Song</button>
-        <div id="songList">
+        var state = generateRandomString(16);
 
-        </div>
-      </div>
-    </div>
+        localStorage.setItem(stateKey, state);
+        var scope = "user-read-private user-read-email";
 
-    <script id="home-template" type="text/x-handlebars-template">
-      <h1 id="userNameHeader">{{display_name}}</h1>
-      <h1>Search Song</h1>
-    </script>
+        var url = "https://accounts.spotify.com/authorize";
+        url += "?response_type=token";
+        url += "&client_id=" + encodeURIComponent(clientId);
+        url += "&scope=" + encodeURIComponent(scope);
+        url += "&redirect_uri=" + encodeURIComponent(redirectUri);
+        url += "&state=" + encodeURIComponent(state);
 
-    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
-    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
-    <script>
-      const getSearch = (e, a) => {
-        console.log("in get search");
-        const searchInput = document.getElementById("searchSongInput").value;
-        $.ajax({
-          url: "/getSearch",
-          data: {
-            access: a,
-            searchTerm: searchInput
-          }
-        }).then(function(data) {
-          const tracks = data.tracks.items;
-          let addHTML = `<ul>`;
-          for(let i=0;i<tracks.length;i++)
-          {
-            addHTML = `${addHTML} <li>${tracks[i].name}</li>`;
-          }
-          addHTML = `${addHTML}</ul>`;
-          document.getElementById('songList').innerHTML = addHTML;
-        });
+        window.location = url;
       };
 
-      const getAuthorizationPage = a => {
-        var homeSource = document.getElementById("home-template").innerHTML,
-          homeTemplate = Handlebars.compile(homeSource),
-          homePlaceholder = document.getElementById("homePage");
+      const generateRandomString = function(length) {
+        let text = "";
+        const possible =
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-        // render oauth info
-        console.log(`Token is: ${a}`);
-        $.ajax({
-          url: "https://api.spotify.com/v1/me",
-          headers: {
-            Authorization: "Bearer " + a
-          }
-        }).then(function(response) {
-          a = response.accessToken;
-          homePlaceholder.innerHTML = homeTemplate(response);
-
-          $("#login").hide();
-          $("#loggedin").show();
-        });
+        for (let i = 0; i < length; i++) {
+          text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
       };
 
       const getHashParams = () => {
@@ -97,35 +63,303 @@
         return hashParams;
       };
 
-      const init = () => {
-        var params = getHashParams();
-        var access_token = params.access_token,
-          refresh_token = params.refresh_token,
-          error = params.error;
+      const handleSearchTerm = xhr => {
+        const obj = JSON.parse(xhr.response);
+        //console.log(obj);
+        document.getElementById("trackUL").innerHTML = "";
+        if (obj.tracks) {
+          for (let i = 0; i < obj.tracks.items.length; i++) {
+            const currentTrack = obj.tracks.items[i];
 
+            const trackLI = document.createElement("li");
+            const trackA = document.createElement("a");
+            var att = document.createAttribute("href");
+            att.value = currentTrack.external_urls.spotify;
+            trackA.setAttributeNode(att);
 
+            let trackListing = `<b>${currentTrack.name}</b> - `;
+            for (let i = 0; i < currentTrack.artists.length; i++) {
+              if (i != 0) {
+                trackListing += `, `;
+              }
+              trackListing += `<i><b>${currentTrack.artists[i].name}</b></i>`;
+            }
 
-        // checks if the authenication code is there
-        if (error) {
-          alert("There was an error during the authentication");
-        } else {
-          if (access_token) {
-            getAuthorizationPage(access_token);
-            // get the playlists of the user
-          } else {
-            // render initial screen
-            $("#login").show();
-            $("#loggedin").hide();
+            trackListing += `<i> (${currentTrack.album.name})</i>`;
+            trackLI.innerHTML = trackListing;
+            trackA.innerHTML = ` <b>External Link</b>`;
+            trackLI.appendChild(trackA);
+
+            const addButton = document.createElement("button");
+            addButton.innerHTML = "Add to Playlist";
+            trackLI.appendChild(addButton);
+
+            const addTrack = () => addSongToPlaylist(currentTrack);
+            addButton.onclick = addTrack;
+            document.getElementById("trackUL").appendChild(trackLI);
+          }
+        }
+      };
+
+      const handleNewCustomPlaylist = xhr => {
+        const obj = JSON.parse(xhr.response);
+
+        if (obj.customPlaylists) {
+          // clear the playlist section when a new result is passed in
+          document.getElementById("playlistUL").innerHTML = "";
+          document.getElementById("allPlaylists").innerHTML = "";
+
+          //console.log(obj.customPlaylists);
+          for (let i = 0; i < obj.customPlaylists.playlists.length; i++) {
+            // add playlist to UL. Display all relevant information about playlist
+            const playlistLI = document.createElement("li");
+            const title = obj.customPlaylists.playlists[i].title;
+            const playlistTitle = document.createElement("h4");
+            playlistTitle.innerHTML = `${title}`;
+            playlistLI.appendChild(playlistTitle);
+
+            // add tag to playlist entry
+            document.getElementById("playlistUL").appendChild(playlistLI);
+
+            // add new playlist to select tag for when user wants to add songs to playlist
+            const pAtt = document.createAttribute("id");
+            pAtt.value = title;
+            playlistLI.setAttributeNode(pAtt);
+
+            const newOption = document.createElement("option");
+            const attValue = document.createAttribute("value");
+            attValue.value = title;
+            newOption.setAttributeNode(attValue);
+            newOption.innerHTML = title;
+
+            document.getElementById("allPlaylists").appendChild(newOption);
+          }
+        }
+      };
+
+      const handleNewSongInPlaylist = xhr => {
+        const obj = JSON.parse(xhr.response);
+        document.getElementById("playlistUL").innerHTML = "";
+        if (obj.customPlaylists) {
+          let currentTrack = null;
+          const playlistSelect = document.getElementById("allPlaylists").value;
+          for (let i = 0; i < obj.customPlaylists.playlists.length; i++) {
+            if (obj.customPlaylists.playlists[i].title === playlistSelect) {
+              currentTrack = obj.customPlaylists.playlists[i].song;
+              break;
+            }
+          }
+
+          for (let i = 0; i < currentTrack.length; i++) {
+            const len = currentTrack.length - 1;
+            const trackLI = document.createElement("li");
+            const trackA = document.createElement("a");
+            var att = document.createAttribute("href");
+            att.value = currentTrack[i].link;
+            trackA.setAttributeNode(att);
+
+            let trackListing = `<b>${currentTrack[i].name}</b> - <i><b>${currentTrack[i].artists}</b></i> <i>(${currentTrack[i].album})</i>`;
+
+            trackLI.innerHTML = trackListing;
+            trackA.innerHTML = ` <b>External Link</b>`;
+            trackLI.appendChild(trackA);
+
+            // const addButton = document.createElement("button");
+            // addButton.innerHTML = "Add to Playlist";
+            // trackLI.appendChild(addButton);
+
+            // const addTrack = () => addSongToPlaylist(currentTrack);
+            // addButton.onclick = addTrack;
+            document.getElementById("playlistUL").appendChild(trackLI);
+          }
+        }
+      };
+
+      // Get call to Spotify API to retrieve songs from their database
+      const getSearchResult = (e, sForm, tForm, a) => {
+        e.preventDefault();
+
+        const sTerm = sForm.querySelector("#searchField").value;
+        const tTerm = tForm.elements;
+
+        const xhr = new XMLHttpRequest();
+
+        let url = "https://api.spotify.com/v1/search?q=";
+        url += encodeURIComponent(sTerm);
+        url += "&type=";
+
+        for (let i = 0; i < tTerm.length; i++) {
+          if (i != 0 && tTerm[i].checked) {
+            url += ",";
+          }
+          if (tTerm[i].checked) {
+            url += encodeURIComponent(tTerm[i].value);
           }
         }
 
-        const button = document.getElementById("searchSongButton");
-        const search = e => getSearch(e,access_token);
+        xhr.open(sForm.method, url);
+        xhr.setRequestHeader("Authorization", "Bearer " + a);
 
-        button.addEventListener("click", search);
+        xhr.onload = () => handleSearchTerm(xhr);
+        xhr.send();
+      };
+
+      const getMyPlaylists = pForm => {
+        const xhr = new XMLHttpRequest();
+
+        //console.log("getMyPlaylists");
+
+        xhr.open("GET", "/getCustomPlaylist");
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.onload = () => handleNewCustomPlaylist(xhr);
+        xhr.send();
+      };
+
+      const getUpdatedPlaylists = () => {
+        const playlistForm = document.getElementById("myPlaylistForm");
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", "/getCustomPlaylist");
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.onload = () => handleNewSongInPlaylist(xhr);
+        xhr.send();
+      };
+
+      const addToPlaylist = (e, pForm) => {
+        e.preventDefault();
+
+        const inputValue = pForm.querySelector("#newPlaylistName").value;
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.open(pForm.method, pForm.action);
+
+        xhr.setRequestHeader(
+          "Content-Type",
+          "application/x-www-form-urlencoded"
+        );
+
+        xhr.setRequestHeader("Accept", "application/json");
+
+        xhr.onload = () => getMyPlaylists(pForm);
+
+        const formData = `title=${inputValue}`;
+        xhr.send(formData);
+
+        return false;
+      };
+
+      const addSongToPlaylist = track => {
+        const playlistSelect = document.getElementById("allPlaylists").value;
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.open("POST", "/addSongToPlaylist");
+
+        xhr.setRequestHeader(
+          "Content-Type",
+          "application/x-www-form-urlencoded"
+        );
+        xhr.setRequestHeader("Accept", "application/json");
+
+        xhr.onload = () => getUpdatedPlaylists();
+
+        const formData = `playlist=${playlistSelect}&track=${JSON.stringify(
+          track
+        )}`;
+        
+        xhr.send(formData);
+      };
+
+      const init = () => {
+        var params = getHashParams();
+
+        accessToken = params.access_token;
+        var state = params.state,
+          storedState = localStorage.getItem(stateKey);
+
+        // if we've gotten the token, take out the url from the url bar and store the token
+
+        const button = document.getElementById("loginButton");
+        const getLogin = () => login();
+        button.addEventListener("click", getLogin);
+
+        const searchButton = document.getElementById("searchButton");
+        const sForm = document.getElementById("searchForm");
+        const tForm = document.getElementById("typeForm");
+        const getSearch = e => getSearchResult(e, sForm, tForm, accessToken);
+        searchButton.addEventListener("click", getSearch);
+
+        const newPlaylistButton = document.getElementById("addMyPlaylist");
+        const playlistForm = document.getElementById("myPlaylistForm");
+        const addPlaylist = e => addToPlaylist(e, playlistForm);
+        newPlaylistButton.addEventListener("click", addPlaylist);
       };
 
       window.onload = init;
     </script>
+  </head>
+
+  <body>
+    <div id="loginDiv">
+      <button id="loginButton" value="/login">Log In</button>
+    </div>
+    <section class="searchSection">
+      <form id="searchForm" action="/search" method="get">
+        <label for="searchTerm">Search: </label>
+        <input id="searchField" type="text" name="searchTerm" />
+        <button id="searchButton">Search</button>
+      </form>
+      <form id="typeForm" method="get">
+        <label>Filters</label>
+        <input
+          class="filterOption"
+          type="checkbox"
+          name="inputTrack"
+          value="track"
+          checked
+        />
+        Track
+        <input
+          class="filterOption"
+          type="checkbox"
+          name="inputArtist"
+          value="artist"
+        />
+        Artist
+        <input
+          class="filterOption"
+          type="checkbox"
+          name="inputAlbum"
+          value="album"
+        />
+        Album
+        <input
+          class="filterOption"
+          type="checkbox"
+          name="inputPlaylist"
+          value="playlist"
+        />
+        Playlist
+      </form>
+    </section>
+    <section id="myPlaylistSection">
+      <form id="myPlaylistForm" action="/addCustomPlaylist" method="post">
+        <label for="newPlaylistTerm">New Playlist Name</label>
+        <input type="text" id="newPlaylistName" />
+        <button id="addMyPlaylist">Add Playlist</button>
+      </form>
+    </section>
+    <div id="content">
+      <section id="trackListing">
+        <h3>Search Results</h3>
+        <ul id="trackUL" style="list-style-type:none;"></ul>
+      </section>
+      <section id="customPlaylists">
+        <h3>My Playlists</h3>
+        <label for="allPlaylists">Choose Playlist to add: </label>
+        <select id="allPlaylists"> </select>
+        <ul id="playlistUL" style="list-style-type:none;"></ul>
+      </section>
+    </div>
   </body>
 </html>
