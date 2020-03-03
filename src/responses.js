@@ -74,7 +74,14 @@ const addCustomPlaylist = (request, response, body) => {
 const addSongToPlaylist = (request, response, body) => {
   // find which index matches the playlist params
   let playlistIndex = 0;
-  const trackBody = JSON.parse(body.track);
+  let trackBody = null;
+  try{
+    trackBody = JSON.parse(body.track);
+  }
+  catch(err){
+      console.log(err);
+      return;
+  }
 
   for (let i = 0; i < customPlaylists.playlists.length; i++) {
     if (customPlaylists.playlists[i].title === body.playlist) {
