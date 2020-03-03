@@ -92,6 +92,7 @@ const addSongToPlaylist = (request, response, body) => {
     }
     trackArtists += `${trackBody.artists[i].name}`;
   }
+  // get names from data
   const trackAlbum = trackBody.album.name;
   const trackLink = trackBody.external_urls.spotify;
 
