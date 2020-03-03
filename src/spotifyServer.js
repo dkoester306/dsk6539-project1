@@ -29,7 +29,11 @@ const urlStruct = {
 };
 
 const handleGet = (request, response, parsedUrl) => {
-  urlStruct[request.method][parsedUrl.pathname](request, response);
+  // check if the path and method are valid
+  if (urlStruct[request.method][parsedUrl.pathname]) {
+    urlStruct[request.method][parsedUrl.pathname](request, response);
+  }
+
 };
 
 
@@ -52,7 +56,10 @@ const handlePost = (request, response, parsedUrl) => {
     const bodyString = Buffer.concat(body).toString();
 
     const bodyParams = query.parse(bodyString);
-    urlStruct[request.method][parsedUrl.pathname](request, response, bodyParams);
+    // check if path is method are valid
+    if (urlStruct[request.method][parsedUrl.pathname]) {
+      urlStruct[request.method][parsedUrl.pathname](request, response, bodyParams);
+    }
   });
 };
 
