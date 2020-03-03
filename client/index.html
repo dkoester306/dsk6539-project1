@@ -263,6 +263,12 @@
 
         xhr.onload = () => getUpdatedPlaylists();
 
+        xhr.onerror = () =>{
+          console.log("Error parsing JSON data");
+        };
+
+
+
         const formData = `playlist=${playlistSelect}&track=${JSON.stringify(
           track
         )}`;
